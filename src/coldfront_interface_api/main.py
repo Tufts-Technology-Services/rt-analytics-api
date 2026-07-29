@@ -10,6 +10,7 @@ engine = create_engine(DATABASE_URL, echo=True)
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
+create_db_and_tables()
 app = FastAPI()
 
 app.include_router(
