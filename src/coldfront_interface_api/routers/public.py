@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-router = APIRouter()
+public_router = APIRouter()
 
-@router.get("/")
+@public_router.get("/")
 async def get_public_route():
     return "OK"
