@@ -2,8 +2,7 @@ from fastapi import Security, HTTPException, status
 from fastapi.security import APIKeyHeader
 from sqlmodel import Session, select
 from pwdlib import PasswordHash
-from .models import APIUser
-from .main import engine
+from .models import APIUser, engine
 
 api_key_header = APIKeyHeader(name="X-API-Key")
 password_hash = PasswordHash.recommended()

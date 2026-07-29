@@ -1,8 +1,17 @@
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, String, Text, DECIMAL, text
 import decimal
+import os
+from sqlmodel import create_engine
 from typing import Optional
 
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql://localhost:3306")
+engine = create_engine(DATABASE_URL, echo=True)
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+create_db_and_tables()
 
 class StorageOwnerStatus(SQLModel, table=True):
     __tablename__ = 'storage_owner_status'

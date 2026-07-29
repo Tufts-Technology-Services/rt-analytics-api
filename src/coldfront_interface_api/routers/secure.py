@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from fastapi import HTTPException
-from ..models import StorageOwnerStatus
-from ..main import engine
+from ..models import StorageOwnerStatus, engine
 from ..auth import get_user
 
-router = APIRouter()
 
 secure_router = APIRouter()
 
