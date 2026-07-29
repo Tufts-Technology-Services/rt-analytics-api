@@ -7,7 +7,7 @@ from ..auth import get_user
 
 secure_router = APIRouter()
 
-@secure_router.get("/")
+@secure_router.get("/user")
 async def get_secure_route(user: dict = Depends(get_user)):
     return user
 
