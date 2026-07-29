@@ -26,3 +26,11 @@ class StorageOwnerStatus(SQLModel, table=True):
     title_prioritize_faculty: Optional[str] = Field(default=None, sa_column=Column('title_prioritize_faculty', Text))
     tmc: Optional[str] = Field(default=None, sa_column=Column('tmc', Text))
     current_project_owner: Optional[str] = Field(default=None, sa_column=Column('current_project_owner', Text))
+
+
+class APIUser(SQLModel, table=True):
+    __tablename__ = 'api_users'
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(sa_column=Column('username', String(50), unique=True, nullable=False))
+    api_key: str = Field(sa_column=Column('api_key', String(100), unique=True, nullable=False))

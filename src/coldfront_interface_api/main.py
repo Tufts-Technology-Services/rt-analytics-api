@@ -1,8 +1,8 @@
 import os
-from fastapi import FastAPI, HTTPException
-from sqlmodel import Session, SQLModel, create_engine, select
-from .models import StorageOwnerStatus
-
+from coldfront_interface_api.auth import get_user
+from fastapi import FastAPI, Depends
+from coldfront_interface_api.routers.public import secure, public
+from sqlmodel import SQLModel, create_engine
 
 DATABASE_URL = os.getenv("DATABASE_URL", "mysql://localhost:3306")
 engine = create_engine(DATABASE_URL, echo=True)
@@ -12,27 +12,12 @@ def create_db_and_tables():
 
 app = FastAPI()
 
-
-@app.get("/health")
-def read_root():
-    return {"status": "OK"}
-
-
-@app.get("/ncq/eligibility/{username}")
-def get_user_eligibility(username: str):
-    with Session(engine) as session:
-        statement = select(StorageOwnerStatus).where(StorageOwnerStatus.username == username)
-        result = session.exec(statement).first()
-        if not result:
-            raise HTTPException(status_code=404, detail="User not found")
-    return {"username": username, "q": q, "eligibility": result}
-
-
-@app.get("/ncq/eligibility")
-def get_ncq_eligibility(start: int = 0, rows: int = 100):
-    with Session(engine) as session:
-        statement = select(StorageOwnerStatus).limit(rows).offset(start)
-        result = session.exec(statement).all()
-        if not result:
-            raise HTTPException(status_code=404, detail="No more users found")
-    return {"start": start, "rows": rows, "results": result}
+app.include_router(
+    public.router,
+    prefix="/api/v1/public"
+)
+app.include_router(
+    secure.router,
+    prefix="/api/v1/secure",
+    dependencies=[Depends(get_user)]
+)
