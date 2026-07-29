@@ -19,7 +19,7 @@ def read_root():
 
 
 @app.get("/ncq/eligibility/{username}")
-def get_user_eligibility(username: str, q: str | None = None):
+def get_user_eligibility(username: str):
     with Session(engine) as session:
         statement = select(StorageOwnerStatus).where(StorageOwnerStatus.username == username)
         result = session.exec(statement).first()
