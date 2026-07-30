@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from fastapi import HTTPException
 from ..models import StorageOwnerStatus, engine
 from ..auth import get_user
@@ -25,8 +25,10 @@ def get_user_eligibility(username: str):
 @secure_router.get("/ncq/eligibility")
 def get_ncq_eligibility(start: int = 0, rows: int = 100):
     with Session(engine) as session:
+        statement = select(func.count(StorageOwnerStatus.username))
+        total_count = session.exec(statement).one()
         statement = select(StorageOwnerStatus).limit(rows).offset(start)
         result = session.exec(statement).all()
         if not result:
             raise HTTPException(status_code=404, detail="No more users found")
-    return {"start": start, "rows": rows, "results": result}
+    return {"start": start, "rows": rows, "total_count": total_count, "results": result}
