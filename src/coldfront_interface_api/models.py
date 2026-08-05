@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, create_engine
 from sqlalchemy import Column, String, Text, DECIMAL, text
 
 DATABASE_URL = os.getenv("DATABASE_URL", "mysql://localhost:3306")
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=True, pool_pre_ping=True, pool_recycle=1800)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
