@@ -1,7 +1,7 @@
 import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlmodel import Session, func, select
 
 from ..auth import get_user
@@ -15,13 +15,21 @@ from ..models import (
 
 secure_router = APIRouter()
 
+# Shared pagination parameters, reused across the list endpoints below.
+START_PARAM = Query(default=0, ge=0, description="Number of matching records to skip, for pagination.")
+ROWS_PARAM = Query(default=100, ge=1, le=500, description="Maximum number of records to return (1-500).")
+
 @secure_router.get("/user")
 async def get_secure_route(user: dict = Depends(get_user)):
+    """Return the identity of the authenticated caller, as resolved from the API key."""
     return user
 
 
 @secure_router.get("/ncq/eligibility/{username}")
-def get_user_eligibility(username: str):
+def get_user_eligibility(
+    username: str = Path(description="Tufts username (UTLN) to look up."),
+):
+    """Get the no-cost-quota (NCQ) eligibility record for a single user."""
     with Session(engine) as session:
         statement = select(StorageOwnerStatus).where(StorageOwnerStatus.username == username)
         result = session.exec(statement).first()
@@ -31,7 +39,8 @@ def get_user_eligibility(username: str):
 
 
 @secure_router.get("/ncq/eligibility")
-def get_ncq_eligibility(start: int = 0, rows: int = 100):
+def get_ncq_eligibility(start: int = START_PARAM, rows: int = ROWS_PARAM):
+    """List no-cost-quota (NCQ) eligibility records for all users, paginated."""
     with Session(engine) as session:
         statement = select(func.count(StorageOwnerStatus.username))
         total_count = session.exec(statement).one()
@@ -43,7 +52,12 @@ def get_ncq_eligibility(start: int = 0, rows: int = 100):
 
 
 @secure_router.get("/storage-owner-status-change/{username}")
-def get_storage_owner_status_change(username: str, start: int = 0, rows: int = 100):
+def get_storage_owner_status_change(
+    username: str = Path(description="Tufts username (UTLN) to look up."),
+    start: int = START_PARAM,
+    rows: int = ROWS_PARAM,
+):
+    """List storage-owner status-change history for a single user, most recent first."""
     with Session(engine) as session:
         statement = select(StorageOwnerStatusChange).where(StorageOwnerStatusChange.username == username)
         total_count = session.exec(select(func.count()).select_from(statement.subquery())).one()
@@ -55,7 +69,17 @@ def get_storage_owner_status_change(username: str, start: int = 0, rows: int = 1
 
 
 @secure_router.get("/storage-owner-status-change")
-def get_storage_owner_status_changes(reviewed_by_rdms: Optional[str] = None, start: int = 0, rows: int = 100):
+def get_storage_owner_status_changes(
+    reviewed_by_rdms: Optional[Literal['Yes', 'No']] = Query(
+        default=None, description="If set, only return records with this RDMS review status."
+    ),
+    start: int = START_PARAM,
+    rows: int = ROWS_PARAM,
+):
+    """List storage-owner status-change records across all users, most recent first.
+
+    Each result has any related notes (same username) attached under "notes".
+    """
     with Session(engine) as session:
         statement = select(StorageOwnerStatusChange)
         if reviewed_by_rdms is not None:
@@ -80,10 +104,27 @@ def get_storage_owner_status_changes(reviewed_by_rdms: Optional[str] = None, sta
 
 @secure_router.patch("/storage-owner-status-change/{username}/{change_date}")
 def update_storage_owner_status_change(
-    username: str,
-    change_date: datetime.date,
     payload: StorageOwnerStatusChangeUpdate,
+    username: str = Path(description="Tufts username (UTLN) of the storage owner."),
+    change_date: datetime.date = Path(
+        description="Date of the status-change record to update, in ISO 8601 format (YYYY-MM-DD)."
+    ),
 ):
+    """Update RDMS review status and/or NCQ grace period on one status-change record, and/or add a note.
+
+    At least one of reviewed_by_rdms, ncq_expiration_date, or note must be provided in the body.
+
+    - review_date is set automatically (to today) when reviewed_by_rdms transitions from 'No' to
+      'Yes' — it cannot be set directly.
+    - Providing ncq_expiration_date always sets reviewed_by_rdms to 'Yes', regardless of what (if
+      anything) was passed for reviewed_by_rdms, and adds an automatic
+      "Grace period granted until <date>" note.
+    - Otherwise, a 'No' -> 'Yes' transition on reviewed_by_rdms adds an automatic "Reviewed" note.
+    - Any note text supplied in the body is added in addition to the automatic note, if any.
+
+    Returns the updated status-change record and the list of notes created by this request
+    (which may be empty).
+    """
     if all(
         value is None
         for value in (payload.reviewed_by_rdms, payload.ncq_expiration_date, payload.note)
@@ -133,7 +174,12 @@ def update_storage_owner_status_change(
 
 
 @secure_router.get("/storage-owner-status-notes/{username}")
-def get_storage_owner_status_notes(username: str, start: int = 0, rows: int = 100):
+def get_storage_owner_status_notes(
+    username: str = Path(description="Tufts username (UTLN) to look up."),
+    start: int = START_PARAM,
+    rows: int = ROWS_PARAM,
+):
+    """List notes for a single user, most recent first."""
     with Session(engine) as session:
         statement = select(StorageOwnerStatusNotes).where(StorageOwnerStatusNotes.username == username)
         total_count = session.exec(select(func.count()).select_from(statement.subquery())).one()

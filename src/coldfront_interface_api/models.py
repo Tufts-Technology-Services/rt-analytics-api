@@ -83,10 +83,27 @@ class StorageOwnerStatusNotes(SQLModel, table=True):
 
 
 class StorageOwnerStatusChangeUpdate(SQLModel):
-    author_utln: str
-    reviewed_by_rdms: Optional[Literal['Yes', 'No']] = None
-    ncq_expiration_date: Optional[datetime.date] = None
-    note: Optional[str] = None
+    """At least one of reviewed_by_rdms, ncq_expiration_date, or note must be provided."""
+
+    author_utln: str = Field(
+        description="Tufts username (UTLN) of the person making this update. "
+        "Used as the author on any note created by this request."
+    )
+    reviewed_by_rdms: Optional[Literal['Yes', 'No']] = Field(
+        default=None,
+        description="RDMS review status to set. Must be 'Yes' or 'No'. "
+        "Ignored if ncq_expiration_date is also provided, since that always sets it to 'Yes'.",
+    )
+    ncq_expiration_date: Optional[datetime.date] = Field(
+        default=None,
+        description="Grace-period expiration date to set, in ISO 8601 format (YYYY-MM-DD). "
+        "Setting this always sets reviewed_by_rdms to 'Yes' and adds a "
+        "'Grace period granted until <date>' note automatically.",
+    )
+    note: Optional[str] = Field(
+        default=None,
+        description="Free-text note to add, in addition to any note generated automatically by this update.",
+    )
 
 
 class APIUser(SQLModel, table=True):
