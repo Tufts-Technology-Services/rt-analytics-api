@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends
-from .routers import public_router, secure_router
+from fastapi import Depends, FastAPI
+
 from .auth import get_user
+from .routers import public_router, secure_router
 
 app = FastAPI()
 
