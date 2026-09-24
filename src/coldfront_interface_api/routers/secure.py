@@ -6,6 +6,7 @@ from sqlmodel import Session, func, select
 
 from ..auth import get_user
 from ..models import (
+    PrFis,
     StorageOwnerStatus,
     StorageOwnerStatusChange,
     StorageOwnerStatusChangeUpdate,
@@ -78,7 +79,8 @@ def get_storage_owner_status_changes(
 ):
     """List storage-owner status-change records across all users, most recent first.
 
-    Each result has any related notes (same username) attached under "notes".
+    Each result has any related notes (same username) attached under "notes", and the owner's
+    "full_name" and "email" attached from pr_fis, if a matching identity record exists.
     """
     with Session(engine) as session:
         statement = select(StorageOwnerStatusChange)
@@ -98,7 +100,27 @@ def get_storage_owner_status_changes(
         for note in session.exec(notes_statement).all():
             notes_by_username[note.username].append(note)
 
-        result = [{**change.model_dump(), "notes": notes_by_username[change.username]} for change in changes]
+        identity_statement = select(PrFis).where(PrFis.pr_identity_utln.in_(usernames))
+        identity_by_username = {}
+        for identity in session.exec(identity_statement).all():
+            name_parts = [
+                identity.pr_identity_firstname,
+                identity.pr_identity_middlename,
+                identity.pr_identity_lastname,
+            ]
+            identity_by_username[identity.pr_identity_utln] = {
+                "full_name": " ".join(part for part in name_parts if part),
+                "email": identity.pr_identity_email,
+            }
+
+        result = [
+            {
+                **change.model_dump(),
+                "notes": notes_by_username[change.username],
+                **identity_by_username.get(change.username, {"full_name": None, "email": None}),
+            }
+            for change in changes
+        ]
     return {"start": start, "rows": rows, "total_count": total_count, "results": result}
 
 
