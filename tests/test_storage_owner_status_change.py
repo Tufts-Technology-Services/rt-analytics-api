@@ -1,6 +1,7 @@
 import datetime
 
 from coldfront_interface_api.models import (
+    PrFis,
     StorageOwnerStatusChange,
     StorageOwnerStatusNotes,
 )
@@ -171,3 +172,28 @@ def test_get_storage_owner_status_changes_filters_by_reviewed_by_rdms(client, db
     response = client.get("/api/v1/secure/storage-owner-status-change", params={"reviewed_by_rdms": "Yes"})
     assert response.status_code == 200
     assert [r["username"] for r in response.json()["results"]] == ["bob"]
+
+
+def test_get_storage_owner_status_changes_attaches_identity_info(client, db_session):
+    change_date = datetime.date(2026, 1, 1)
+    make_change(db_session, change_date=change_date, username="alice", reviewed_by_rdms="No")
+    make_change(db_session, change_date=change_date, username="bob", reviewed_by_rdms="No")
+
+    db_session.add(
+        PrFis(
+            pr_identity_utln="alice",
+            pr_identity_firstname="Alice",
+            pr_identity_middlename=None,
+            pr_identity_lastname="Anderson",
+            pr_identity_email="alice@tufts.edu",
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/api/v1/secure/storage-owner-status-change")
+    assert response.status_code == 200
+    results_by_username = {r["username"]: r for r in response.json()["results"]}
+    assert results_by_username["alice"]["full_name"] == "Alice Anderson"
+    assert results_by_username["alice"]["email"] == "alice@tufts.edu"
+    assert results_by_username["bob"]["full_name"] is None
+    assert results_by_username["bob"]["email"] is None

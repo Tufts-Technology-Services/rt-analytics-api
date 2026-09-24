@@ -82,6 +82,18 @@ class StorageOwnerStatusNotes(SQLModel, table=True):
     note: str = Field(sa_column=Column('note', Text, nullable=False))
 
 
+class PrFis(SQLModel, table=True):
+    """External identity table maintained outside this project; read-only join source for names/emails."""
+
+    __tablename__ = 'pr_fis'
+
+    pr_identity_utln: str = Field(sa_column=Column('pr_identity_utln', String(25), primary_key=True))
+    pr_identity_firstname: Optional[str] = Field(default=None, sa_column=Column('pr_identity_firstname', String(100)))
+    pr_identity_middlename: Optional[str] = Field(default=None, sa_column=Column('pr_identity_middlename', String(100)))
+    pr_identity_lastname: Optional[str] = Field(default=None, sa_column=Column('pr_identity_lastname', String(100)))
+    pr_identity_email: Optional[str] = Field(default=None, sa_column=Column('pr_identity_email', String(255)))
+
+
 class StorageOwnerStatusChangeUpdate(SQLModel):
     """At least one of reviewed_by_rdms, ncq_expiration_date, or note must be provided."""
 

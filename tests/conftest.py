@@ -13,6 +13,7 @@ from coldfront_interface_api.auth import get_user
 from coldfront_interface_api.main import app
 from coldfront_interface_api.models import (
     APIUser,
+    PrFis,
     StorageOwnerStatus,
     StorageOwnerStatusChange,
     StorageOwnerStatusNotes,
@@ -27,6 +28,7 @@ def clean_db():
         session.exec(delete(StorageOwnerStatusChange))
         session.exec(delete(StorageOwnerStatus))
         session.exec(delete(APIUser))
+        session.exec(delete(PrFis))
         session.commit()
 
 
